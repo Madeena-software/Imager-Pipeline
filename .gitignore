@@ -3,8 +3,93 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
+
+# YOLO
+runs/
+*.pt
+*.weights
+*.onnx
+*.engine
+*.mlmodel
+*.torchscript
+yolov*/
+yolo11*/
 # C extensions
 *.so
+
+# Images and Videos
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.bmp
+*.tiff
+*.mp4
+*.avi
+*.mov
+*.mkv
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+output/
+results/
+logs/
+*.log
+*.env
+
+# Model files (optional - uncomment if you want to track models)
+# !custom_model.pt
+
+# Data (optional - uncomment if you want to track specific images)
+# !sample_images/
 
 # Distribution / packaging
 .Python
