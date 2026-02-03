@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Madeena Image Processor - PyScript</title>
+    
+    <!-- PyScript -->
+    <link rel="stylesheet" href="https://pyscript.net/releases/2024.1.1/core.css">
+    <script type="module" src="https://pyscript.net/releases/2024.1.1/core.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+            color: #333;
+            padding: 30px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        header .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            position: relative;
+        }
+
+        .fullscreen-btn {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #333;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s;
+        }
+
+        .fullscreen-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        header img.logo {
+            height: 60px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: flex;
+            gap: 0;
+            padding: 0;
+            position: relative;
+        }
+
+        .controls-panel {
+            background: #f8f9fa;
+            padding: 25px;
+            width: 400px;
+            min-width: 400px;
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            transition: margin-left 0.3s ease;
+            position: relative;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+        }
+
+        .controls-panel.collapsed {
+            margin-left: -400px;
+        }
+
+        .sidebar-toggle {
+            position: absolute;
+            right: -30px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: #4ecca3;
+            border: none;
+            color: white;
+            padding: 15px 8px;
+            border-radius: 0 8px 8px 0;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.3s;
+            z-index: 10;
+        }
+
+        .sidebar-toggle:hover {
+            background: #3db892;
+        }
+
+        .upload-section {
+            margin-bottom: 20px;
+        }
+
+        .upload-section h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        /* Three-image upload grid */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .upload-item {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            border: 2px dashed #ddd;
+            transition: all 0.3s;
+        }
+
+        .upload-item:hover {
+            border-color: #4ecca3;
+        }
+
+        .upload-item.has-file {
+            border-color: #4ecca3;
+            border-style: solid;
+            background: #f0fff8;
+        }
+
+        .upload-item label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+
+        .upload-item .upload-drop {
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 8px;
+            background: #fafafa;
+            transition: all 0.3s;
+        }
+
+        .upload-item .upload-drop:hover {
+            background: #f0f0f0;
+        }
+
+        .upload-item .upload-drop.dragging {
+            background: #e8f5e9;
+            border-color: #4ecca3;
+        }
+
+        .upload-item .file-info {
+            margin-top: 10px;
+            padding: 8px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            font-size: 0.85em;
+            color: #2e7d32;
+        }
+
+        .upload-item input[type="file"] {
+            display: none;
+        }
+
+        .batch-info {
+            background: #fff3cd;
+            padding: 10px 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+            color: #856404;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #4ecca3, #38b593);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 204, 163, 0.4);
+        }
+
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-reset {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            width: 100%;
+            margin-top: 10px;
+            transition: all 0.3s;
+        }
+
+        .btn-reset:hover {
+            background: #ee5a5a;
+        }
+
+        .option-group {
+            margin-bottom: 20px;
+        }
+
+        .option-group h3 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 1em;
+            border-bottom: 2px solid #4ecca3;
+            padding-bottom: 5px;
+        }
+
+        .operation-btn {
+            background: white;
+            border: 2px solid #ddd;
+            padding: 10px 15px;
+            margin: 5px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9em;
+        }
+
+        .operation-btn:hover {
+            border-color: #4ecca3;
+            background: #f0fff8;
+        }
+
+        .slider-control {
+            margin: 10px 0;
+        }
+
+        .slider-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.9em;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        input[type="checkbox"] {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
+        }
+
+        select {
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 0.9em;
+        }
+
+        .image-display {
+            flex: 1;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            min-height: 500px;
+            background: #1a1a2e;
+        }
+
+        .image-info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 0.9em;
+        }
+
+        .image-container {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #16213e;
+            border-radius: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .image-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .placeholder {
+            text-align: center;
+            color: #888;
+        }
+
+        .placeholder-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #4ecca3;
+            padding: 50px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4ecca3;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #e8f5e9;
+            color: #2e7d32;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .log-container {
+            background: #1a1a2e;
+            color: #4ecca3;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 0.85em;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 15px;
+            white-space: pre-wrap;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.6);
+        }
+
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 700px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #4ecca3;
+        }
+
+        .modal-header h2 {
+            color: #333;
+            font-size: 1.4em;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.8em;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .close-btn:hover {
+            color: #333;
+        }
+
+        .param-group {
+            margin-bottom: 15px;
+        }
+
+        .param-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .param-group input[type="number"],
+        .param-group input[type="text"],
+        .param-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .param-group small {
+            display: block;
+            color: #666;
+            margin-top: 5px;
+            font-size: 0.85em;
+        }
+
+        .param-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 25px;
+            justify-content: flex-end;
+        }
+
+        .modal-actions button {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+        }
+
+        .btn-apply {
+            background: #4ecca3;
+            color: white;
+            border: none;
+        }
+
+        .btn-apply:hover {
+            background: #3db892;
+        }
+
+        .btn-cancel {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+        }
+
+        .btn-cancel:hover {
+            background: #e0e0e0;
+        }
+
+        .preset-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .btn-preset {
+            padding: 8px 20px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-preset:hover,
+        .btn-preset.active {
+            border-color: #4ecca3;
+            background: #f0fff8;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Progress bar */
+        .progress-container {
+            background: #e0e0e0;
+            border-radius: 10px;
+            height: 20px;
+            margin: 15px 0;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #4ecca3, #38b593);
+            height: 100%;
+            width: 0%;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 0.8em;
+        }
+
+        /* Batch results gallery */
+        .results-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .result-thumb {
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .result-thumb:hover {
+            border-color: #4ecca3;
+            transform: scale(1.05);
+        }
+
+        .result-thumb.active {
+            border-color: #4ecca3;
+        }
+
+        .result-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+            .controls-panel {
+                width: 100%;
+                min-width: auto;
+                max-height: none;
+            }
+            .controls-panel.collapsed {
+                margin-left: 0;
+                margin-top: -100%;
+            }
+        }
+
+        /* Loading Overlay */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(245, 245, 245, 0.95) 0%, rgba(224, 224, 224, 0.95) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+
+        .loading-content {
+            text-align: center;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 20px;
+            border: 4px solid #e0e0e0;
+            border-top: 4px solid #4ecca3;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            font-size: 1.2em;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .loading-subtext {
+            font-size: 0.95em;
+            color: #666;
+            max-height: 200px;
+            overflow-y: auto;
+            max-width: 400px;
+            text-align: left;
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            line-height: 1.5;
+        }
+
+        #loadingOverlay.hidden {
+            display: none;
+        }
+    </style>
+
+    <!-- PyScript Config -->
+    <py-config>
+        packages = ["numpy", "pillow", "scipy", "pywavelets", "opencv-python"]
+        
+        [[fetch]]
+        from = "processing.py"
+        to_file = "processing.py"
+        
+        [[fetch]]
+        from = "imagerPipeline/wavelet_denoising.py"
+        to_file = "wavelet_denoising.py"
+        
+        [[fetch]]
+        from = "imagerPipeline/imagej_replicator.py"
+        to_file = "imagej_replicator.py"
+        
+        [[fetch]]
+        from = "imagerPipeline/complete_pipeline.py"
+        to_file = "complete_pipeline.py"
+    </py-config>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Loading Image Processing Pipeline...</div>
+            <div class="loading-subtext" id="loadingMessages">
+                <div>Initializing PyScript environment...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="assets/img/madeena-nobg.png" alt="Madeena Logo" class="logo">
+                <h1>Image Processor</h1>
+                <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">⛶</button>
+            </div>
+            <p class="subtitle">Advanced X-ray Processing Pipeline - Single & Batch Processing</p>
+        </header>
+
+        <div class="main-content">
+            <div class="controls-panel" id="controlsPanel">
+                <button class="sidebar-toggle" id="sidebarToggle" title="Toggle Sidebar">◀</button>
+                
+                <div class="upload-section">
+                    <h3>📤 Upload Calibration Images</h3>
+                    
+                    <div class="batch-info">
+                        ℹ️ Upload matching sets of Dark, Gain (Flat), and Raw images. Upload 1 file of each type for single processing, or equal numbers for batch processing.
+                    </div>
+                    
+                    <div class="upload-grid">
+                        <!-- Dark Images -->
+                        <div class="upload-item" id="darkUploadItem">
+                            <label>🌑 Dark Image(s)</label>
+                            <div class="upload-drop" id="darkDropZone">
+                                <div>📁 Click or drop dark image(s)</div>
+                                <input type="file" id="darkInput" accept=".tiff,.tif,.png,.jpg,.jpeg" multiple>
+                            </div>
+                            <div class="file-info" id="darkFileInfo" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Gain/Flat Images -->
+                        <div class="upload-item" id="gainUploadItem">
+                            <label>☀️ Gain/Flat Image(s)</label>
+                            <div class="upload-drop" id="gainDropZone">
+                                <div>📁 Click or drop gain/flat image(s)</div>
+                                <input type="file" id="gainInput" accept=".tiff,.tif,.png,.jpg,.jpeg" multiple>
+                            </div>
+                            <div class="file-info" id="gainFileInfo" style="display: none;"></div>
+                        </div>
+                        
+                        <!-- Raw/Rad Images -->
+                        <div class="upload-item" id="rawUploadItem">
+                            <label>📷 Raw/Rad Image(s)</label>
+                            <div class="upload-drop" id="rawDropZone">
+                                <div>📁 Click or drop raw radiograph(s)</div>
+                                <input type="file" id="rawInput" accept=".tiff,.tif,.png,.jpg,.jpeg" multiple>
+                            </div>
+                            <div class="file-info" id="rawFileInfo" style="display: none;"></div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn" id="processBtn" disabled>🚀 Process Images</button>
+                </div>
+
+                <div id="message"></div>
+
+                <div class="processing-options" id="processingOptions" style="display: none;">
+                    <div class="option-group">
+                        <h3>🔬 Pipeline Processing</h3>
+                        <button class="operation-btn" id="pipelineEnhanceBtn">⚙️ Adjust Pipeline Parameters</button>
+                    </div>
+
+                    <div class="option-group">
+                        <button class="btn-reset" id="resetBtn">🔄 Reset</button>
+                        <button class="btn" id="downloadBtn">💾 Download Result</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="image-display">
+                <div class="image-info" id="imageInfo" style="display: none;">
+                    <strong>Status:</strong> <span id="statusText">Ready</span><br>
+                    <strong>Images:</strong> <span id="imageCount">0</span> set(s) loaded<br>
+                    <strong>Output Shape:</strong> <span id="imageShape">-</span><br>
+                    <div class="progress-container" id="progressContainer" style="display: none;">
+                        <div class="progress-bar" id="progressBar">0%</div>
+                    </div>
+                </div>
+
+                <div class="image-container" id="imageContainer">
+                    <div class="placeholder">
+                        <div class="placeholder-icon">🖼️</div>
+                        <h2>No Image Loaded</h2>
+                        <p>Upload Dark, Gain, and Raw images to start processing</p>
+                    </div>
+                </div>
+                
+                <div class="results-gallery" id="resultsGallery" style="display: none;"></div>
+                
+                <div class="log-container" id="logContainer" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pipeline Enhancement Modal -->
+    <div id="pipelineModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>⚡ Image Processing Pipeline Parameters</h2>
+                <button class="close-btn" id="closeModal">&times;</button>
+            </div>
+            
+            <div class="preset-buttons">
+                <button class="btn-preset active" data-preset="default">Default</button>
+                <button class="btn-preset" data-preset="thorax">Thorax</button>
+                <button class="btn-preset" data-preset="bed">BED Detector</button>
+            </div>
+
+            <!-- Detector Settings -->
+            <div class="option-group">
+                <h3>🎯 Detector Settings</h3>
+                <div class="param-group">
+                    <label for="param_detector_type">Detector Type:</label>
+                    <select id="param_detector_type">
+                        <option value="auto">Auto Detect</option>
+                        <option value="BED">BED</option>
+                        <option value="TRX">TRX</option>
+                    </select>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_crop_top">Crop Top (px):</label>
+                        <input type="number" id="param_crop_top" value="200" min="0">
+                    </div>
+                    <div class="param-group">
+                        <label for="param_crop_bottom">Crop Bottom (px):</label>
+                        <input type="number" id="param_crop_bottom" value="200" min="0">
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_crop_left">Crop Left (px):</label>
+                        <input type="number" id="param_crop_left" value="0" min="0">
+                    </div>
+                    <div class="param-group">
+                        <label for="param_crop_right">Crop Right (px):</label>
+                        <input type="number" id="param_crop_right" value="0" min="0">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wavelet Denoising -->
+            <div class="option-group">
+                <h3>🌊 Wavelet Denoising</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_wavelet_enabled" checked>
+                    <label for="param_wavelet_enabled">Enable Wavelet Denoising</label>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_wavelet_type">Wavelet Type:</label>
+                        <select id="param_wavelet_type">
+                            <option value="sym4" selected>sym4 (Symlet)</option>
+                            <option value="db4">db4 (Daubechies)</option>
+                            <option value="db8">db8 (Daubechies)</option>
+                            <option value="coif1">coif1 (Coiflet)</option>
+                            <option value="bior4.4">bior4.4 (Biorthogonal)</option>
+                        </select>
+                    </div>
+                    <div class="param-group">
+                        <label for="param_wavelet_level">Decomposition Level:</label>
+                        <input type="number" id="param_wavelet_level" value="3" min="1" max="6">
+                    </div>
+                </div>
+                <div class="param-group">
+                    <label for="param_wavelet_method">Thresholding Method:</label>
+                    <select id="param_wavelet_method">
+                        <option value="BayesShrink" selected>BayesShrink (Adaptive)</option>
+                        <option value="VisuShrink">VisuShrink (Universal)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Threshold Settings -->
+            <div class="option-group">
+                <h3>📊 Auto Threshold</h3>
+                <div class="param-group">
+                    <label for="param_threshold_method">Threshold Method:</label>
+                    <select id="param_threshold_method">
+                        <option value="auto" selected>Auto (Intelligent Selection)</option>
+                        <option value="valley">Valley Detection</option>
+                        <option value="otsu">Otsu's Method</option>
+                        <option value="knee">Knee Detection</option>
+                        <option value="percentile_25">25th Percentile</option>
+                        <option value="secondary_peak">Secondary Peak</option>
+                    </select>
+                    <small>Auto mode selects the best method based on image characteristics</small>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_debug_enabled">
+                    <label for="param_debug_enabled">Enable Debug Mode (show threshold histogram & details)</label>
+                </div>
+            </div>
+
+            <!-- Invert -->
+            <div class="option-group">
+                <h3>🔄 Inversion</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_invert_enabled" checked>
+                    <label for="param_invert_enabled">Invert Image (for proper X-ray display)</label>
+                </div>
+            </div>
+
+            <!-- Contrast Enhancement -->
+            <div class="option-group">
+                <h3>🎚️ Contrast Enhancement (ImageJ-style)</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_contrast_enabled" checked>
+                    <label for="param_contrast_enabled">Enable Contrast Enhancement</label>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_saturated_pixels">Saturated Pixels (%):</label>
+                        <input type="number" id="param_saturated_pixels" value="5" min="0" max="10" step="0.05">
+                        <small>Percentage of pixels to saturate at each end</small>
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_normalize" checked>
+                    <label for="param_normalize">Normalize (Stretch Histogram)</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_equalize" checked>
+                    <label for="param_equalize">Equalize Histogram</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_classic_equalization">
+                    <label for="param_classic_equalization">Classic Equalization Mode</label>
+                </div>
+            </div>
+
+            <!-- CLAHE -->
+            <div class="option-group">
+                <h3>📈 CLAHE (Adaptive Histogram Equalization)</h3>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_clahe_enabled" checked>
+                    <label for="param_clahe_enabled">Enable CLAHE</label>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_clahe_blocksize">Block Size (pixels):</label>
+                        <input type="number" id="param_clahe_blocksize" value="127" min="31" max="255" step="2">
+                        <small>127 = default ImageJ, 63 = more detail, 255 = smoother</small>
+                    </div>
+                    <div class="param-group">
+                        <label for="param_clahe_histogram_bins">Histogram Bins:</label>
+                        <input type="number" id="param_clahe_histogram_bins" value="256" min="64" max="512" step="64">
+                        <small>256 = default (full 8-bit range)</small>
+                    </div>
+                </div>
+                <div class="param-row">
+                    <div class="param-group">
+                        <label for="param_clahe_max_slope">Max Slope:</label>
+                        <input type="number" id="param_clahe_max_slope" value="0.6" min="0.1" max="10" step="0.1">
+                        <small>0.6 = gentle (medical), 1.5 = medium, 3.0 = ImageJ default</small>
+                    </div>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_clahe_fast">
+                    <label for="param_clahe_fast">Fast Mode (lower quality)</label>
+                </div>
+                <div class="checkbox-group">
+                    <input type="checkbox" id="param_clahe_composite" checked>
+                    <label for="param_clahe_composite">Composite Mode</label>
+                </div>
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-cancel" id="cancelParams">Cancel</button>
+                <button class="btn-apply" id="applyParams">🚀 Apply Pipeline</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let darkFiles = [];
+        let gainFiles = [];
+        let rawFiles = [];
+        let processedImages = [];
+        let currentImageIndex = 0;
+        let isProcessing = false;
+
+        // DOM Elements
+        const darkInput = document.getElementById('darkInput');
+        const gainInput = document.getElementById('gainInput');
+        const rawInput = document.getElementById('rawInput');
+        const darkDropZone = document.getElementById('darkDropZone');
+        const gainDropZone = document.getElementById('gainDropZone');
+        const rawDropZone = document.getElementById('rawDropZone');
+        const darkFileInfo = document.getElementById('darkFileInfo');
+        const gainFileInfo = document.getElementById('gainFileInfo');
+        const rawFileInfo = document.getElementById('rawFileInfo');
+        const processBtn = document.getElementById('processBtn');
+        const pipelineModal = document.getElementById('pipelineModal');
+        const imageContainer = document.getElementById('imageContainer');
+        const logContainer = document.getElementById('logContainer');
+        const resultsGallery = document.getElementById('resultsGallery');
+        const progressBar = document.getElementById('progressBar');
+        const progressContainer = document.getElementById('progressContainer');
+        const imageInfo = document.getElementById('imageInfo');
+        const processingOptions = document.getElementById('processingOptions');
+
+        // Setup file upload handlers
+        function setupUploadZone(dropZone, fileInput, fileInfoDiv, uploadItem, arrayName) {
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragging');
+            });
+            
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragging');
+            });
+            
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragging');
+                handleFiles(e.dataTransfer.files, fileInfoDiv, uploadItem, arrayName);
+            });
+            
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files, fileInfoDiv, uploadItem, arrayName);
+            });
+        }
+
+        function handleFiles(files, fileInfoDiv, uploadItem, arrayName) {
+            const fileList = Array.from(files);
+            if (arrayName === 'dark') darkFiles = fileList;
+            else if (arrayName === 'gain') gainFiles = fileList;
+            else if (arrayName === 'raw') rawFiles = fileList;
+            
+            if (fileList.length > 0) {
+                uploadItem.classList.add('has-file');
+                fileInfoDiv.style.display = 'block';
+                fileInfoDiv.innerHTML = `✓ ${fileList.length} file(s) selected<br><small>${fileList.map(f => f.name).join(', ')}</small>`;
+            } else {
+                uploadItem.classList.remove('has-file');
+                fileInfoDiv.style.display = 'none';
+            }
+            
+            updateProcessButton();
+        }
+
+        function updateProcessButton() {
+            const darkCount = darkFiles.length;
+            const gainCount = gainFiles.length;
+            const rawCount = rawFiles.length;
+            
+            if (darkCount > 0 && gainCount > 0 && rawCount > 0) {
+                if (darkCount === gainCount && gainCount === rawCount) {
+                    processBtn.disabled = false;
+                    processBtn.textContent = `🚀 Process ${rawCount} Image Set(s)`;
+                } else {
+                    processBtn.disabled = true;
+                    processBtn.textContent = `⚠️ Mismatched counts (D:${darkCount}, G:${gainCount}, R:${rawCount})`;
+                }
+            } else {
+                processBtn.disabled = true;
+                processBtn.textContent = '🚀 Process Images';
+            }
+        }
+
+        // Initialize upload zones
+        setupUploadZone(darkDropZone, darkInput, darkFileInfo, document.getElementById('darkUploadItem'), 'dark');
+        setupUploadZone(gainDropZone, gainInput, gainFileInfo, document.getElementById('gainUploadItem'), 'gain');
+        setupUploadZone(rawDropZone, rawInput, rawFileInfo, document.getElementById('rawUploadItem'), 'raw');
+
+        // Sidebar toggle
+        document.getElementById('sidebarToggle').addEventListener('click', () => {
+            const panel = document.getElementById('controlsPanel');
+            const toggle = document.getElementById('sidebarToggle');
+            panel.classList.toggle('collapsed');
+            toggle.innerHTML = panel.classList.contains('collapsed') ? '▶' : '◀';
+        });
+
+        // Fullscreen toggle
+        document.getElementById('fullscreenBtn').addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+
+        // No slider value displays needed (removed basic operations)
+
+        // Process button - opens modal
+        processBtn.addEventListener('click', () => {
+            pipelineModal.style.display = 'block';
+        });
+
+        // Pipeline Enhancement button
+        document.getElementById('pipelineEnhanceBtn').addEventListener('click', () => {
+            pipelineModal.style.display = 'block';
+        });
+
+        // Modal controls
+        document.getElementById('closeModal').addEventListener('click', () => {
+            pipelineModal.style.display = 'none';
+        });
+        document.getElementById('cancelParams').addEventListener('click', () => {
+            pipelineModal.style.display = 'none';
+        });
+        window.addEventListener('click', (e) => {
+            if (e.target === pipelineModal) pipelineModal.style.display = 'none';
+        });
+
+        // Preset buttons
+        document.querySelectorAll('.btn-preset').forEach(btn => {
+            btn.addEventListener('click', function() {
+                document.querySelectorAll('.btn-preset').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const preset = this.dataset.preset;
+                if (preset === 'default') {
+                    applyPreset({
+                        detector_type: 'auto', crop_top: 200, crop_bottom: 200, crop_left: 0, crop_right: 0,
+                        wavelet_enabled: true, wavelet_type: 'sym4', wavelet_level: 3, wavelet_method: 'BayesShrink',
+                        threshold_method: 'auto', debug_enabled: false, invert_enabled: true,
+                        contrast_enabled: true, saturated_pixels: 5, normalize: true, equalize: true, classic_equalization: false,
+                        clahe_enabled: true, clahe_blocksize: 127, clahe_histogram_bins: 256, clahe_max_slope: 0.6, clahe_fast: false, clahe_composite: true
+                    });
+                } else if (preset === 'thorax') {
+                    applyPreset({
+                        detector_type: 'TRX', crop_top: 200, crop_bottom: 200, crop_left: 0, crop_right: 0,
+                        wavelet_enabled: true, wavelet_type: 'sym4', wavelet_level: 3, wavelet_method: 'BayesShrink',
+                        threshold_method: 'auto', debug_enabled: false, invert_enabled: true,
+                        contrast_enabled: true, saturated_pixels: 5, normalize: true, equalize: true, classic_equalization: false,
+                        clahe_enabled: true, clahe_blocksize: 127, clahe_histogram_bins: 256, clahe_max_slope: 0.6, clahe_fast: false, clahe_composite: true
+                    });
+                } else if (preset === 'bed') {
+                    applyPreset({
+                        detector_type: 'BED', crop_top: 200, crop_bottom: 200, crop_left: 0, crop_right: 0,
+                        wavelet_enabled: true, wavelet_type: 'sym4', wavelet_level: 3, wavelet_method: 'BayesShrink',
+                        threshold_method: 'auto', debug_enabled: false, invert_enabled: true,
+                        contrast_enabled: true, saturated_pixels: 5, normalize: true, equalize: true, classic_equalization: false,
+                        clahe_enabled: true, clahe_blocksize: 127, clahe_histogram_bins: 256, clahe_max_slope: 0.6, clahe_fast: false, clahe_composite: true
+                    });
+                }
+            });
+        });
+
+        function applyPreset(params) {
+            document.getElementById('param_detector_type').value = params.detector_type;
+            document.getElementById('param_crop_top').value = params.crop_top;
+            document.getElementById('param_crop_bottom').value = params.crop_bottom;
+            document.getElementById('param_crop_left').value = params.crop_left;
+            document.getElementById('param_crop_right').value = params.crop_right;
+            document.getElementById('param_wavelet_enabled').checked = params.wavelet_enabled;
+            document.getElementById('param_wavelet_type').value = params.wavelet_type;
+            document.getElementById('param_wavelet_level').value = params.wavelet_level;
+            document.getElementById('param_wavelet_method').value = params.wavelet_method;
+            document.getElementById('param_threshold_method').value = params.threshold_method;
+            document.getElementById('param_debug_enabled').checked = params.debug_enabled || false;
+            document.getElementById('param_invert_enabled').checked = params.invert_enabled;
+            document.getElementById('param_contrast_enabled').checked = params.contrast_enabled;
+            document.getElementById('param_saturated_pixels').value = params.saturated_pixels;
+            document.getElementById('param_normalize').checked = params.normalize;
+            document.getElementById('param_equalize').checked = params.equalize;
+            document.getElementById('param_classic_equalization').checked = params.classic_equalization || false;
+            document.getElementById('param_clahe_enabled').checked = params.clahe_enabled;
+            document.getElementById('param_clahe_blocksize').value = params.clahe_blocksize;
+            document.getElementById('param_clahe_histogram_bins').value = params.clahe_histogram_bins;
+            document.getElementById('param_clahe_max_slope').value = params.clahe_max_slope;
+            document.getElementById('param_clahe_fast').checked = params.clahe_fast || false;
+            document.getElementById('param_clahe_composite').checked = params.clahe_composite !== false;
+        }
+
+        function getParams() {
+            return {
+                detector_type: document.getElementById('param_detector_type').value,
+                crop_top: parseInt(document.getElementById('param_crop_top').value),
+                crop_bottom: parseInt(document.getElementById('param_crop_bottom').value),
+                crop_left: parseInt(document.getElementById('param_crop_left').value),
+                crop_right: parseInt(document.getElementById('param_crop_right').value),
+                wavelet_enabled: document.getElementById('param_wavelet_enabled').checked,
+                wavelet_type: document.getElementById('param_wavelet_type').value,
+                wavelet_level: parseInt(document.getElementById('param_wavelet_level').value),
+                wavelet_method: document.getElementById('param_wavelet_method').value,
+                threshold_method: document.getElementById('param_threshold_method').value,
+                debug_enabled: document.getElementById('param_debug_enabled').checked,
+                invert_enabled: document.getElementById('param_invert_enabled').checked,
+                contrast_enabled: document.getElementById('param_contrast_enabled').checked,
+                saturated_pixels: parseFloat(document.getElementById('param_saturated_pixels').value),
+                normalize: document.getElementById('param_normalize').checked,
+                equalize: document.getElementById('param_equalize').checked,
+                classic_equalization: document.getElementById('param_classic_equalization').checked,
+                clahe_enabled: document.getElementById('param_clahe_enabled').checked,
+                clahe_blocksize: parseInt(document.getElementById('param_clahe_blocksize').value),
+                clahe_histogram_bins: parseInt(document.getElementById('param_clahe_histogram_bins').value),
+                clahe_max_slope: parseFloat(document.getElementById('param_clahe_max_slope').value),
+                clahe_fast: document.getElementById('param_clahe_fast').checked,
+                clahe_composite: document.getElementById('param_clahe_composite').checked
+            };
+        }
+
+        // Apply pipeline processing
+        document.getElementById('applyParams').addEventListener('click', async () => {
+            if (isProcessing) return;
+            
+            pipelineModal.style.display = 'none';
+            isProcessing = true;
+            
+            const params = getParams();
+            
+            // Show processing UI
+            imageInfo.style.display = 'block';
+            progressContainer.style.display = 'block';
+            document.getElementById('statusText').textContent = 'Processing...';
+            logContainer.style.display = 'block';
+            logContainer.textContent = 'Starting pipeline processing...\n';
+            
+            imageContainer.innerHTML = '<div class="loading"><div class="spinner"></div><p>Processing with PyScript...</p></div>';
+            
+            // Process each image set
+            const total = rawFiles.length;
+            processedImages = [];
+            
+            for (let i = 0; i < total; i++) {
+                const progress = Math.round(((i + 1) / total) * 100);
+                progressBar.style.width = progress + '%';
+                progressBar.textContent = `${i + 1}/${total} (${progress}%)`;
+                
+                logContainer.textContent += `\nProcessing image ${i + 1}/${total}: ${rawFiles[i].name}\n`;
+                
+                try {
+                    // Read files as base64
+                    const darkBase64 = await fileToBase64(darkFiles[i]);
+                    const gainBase64 = await fileToBase64(gainFiles[i]);
+                    const rawBase64 = await fileToBase64(rawFiles[i]);
+                    
+                    // Call Python processing via PyScript
+                    const result = await processPyScript(darkBase64, gainBase64, rawBase64, params);
+                    
+                    if (result.success) {
+                        processedImages.push({
+                            name: rawFiles[i].name,
+                            image: result.image,
+                            shape: result.shape
+                        });
+                        logContainer.textContent += result.log + '\n';
+                    } else {
+                        logContainer.textContent += `Error: ${result.error}\n`;
+                    }
+                } catch (error) {
+                    logContainer.textContent += `Error processing ${rawFiles[i].name}: ${error.message}\n`;
+                }
+            }
+            
+            isProcessing = false;
+            document.getElementById('statusText').textContent = 'Complete';
+            document.getElementById('imageCount').textContent = processedImages.length;
+            processingOptions.style.display = 'block';
+            
+            if (processedImages.length > 0) {
+                displayProcessedImage(0);
+                
+                if (processedImages.length > 1) {
+                    displayResultsGallery();
+                }
+            }
+        });
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function displayProcessedImage(index) {
+            currentImageIndex = index;
+            const img = processedImages[index];
+            
+            imageContainer.innerHTML = `
+                <img src="data:image/png;base64,${img.image}" alt="Processed: ${img.name}">
+            `;
+            
+            document.getElementById('imageShape').textContent = img.shape ? `${img.shape[0]}x${img.shape[1]}` : '-';
+            
+            // Update gallery selection
+            document.querySelectorAll('.result-thumb').forEach((thumb, i) => {
+                thumb.classList.toggle('active', i === index);
+            });
+        }
+
+        function displayResultsGallery() {
+            resultsGallery.style.display = 'grid';
+            resultsGallery.innerHTML = '';
+            
+            processedImages.forEach((img, index) => {
+                const thumb = document.createElement('div');
+                thumb.className = 'result-thumb' + (index === currentImageIndex ? ' active' : '');
+                thumb.innerHTML = `<img src="data:image/png;base64,${img.image}" alt="${img.name}">`;
+                thumb.addEventListener('click', () => displayProcessedImage(index));
+                resultsGallery.appendChild(thumb);
+            });
+        }
+
+        // Download button
+        document.getElementById('downloadBtn').addEventListener('click', () => {
+            if (processedImages.length === 0) return;
+            
+            const img = processedImages[currentImageIndex];
+            const link = document.createElement('a');
+            link.href = 'data:image/png;base64,' + img.image;
+            link.download = img.name.replace(/\.[^/.]+$/, '') + '_processed.png';
+            link.click();
+        });
+
+        // Reset button
+        document.getElementById('resetBtn').addEventListener('click', () => {
+            // Reset processed images state
+            processedImages = [];
+            currentImageIndex = 0;
+            
+            // Reset file arrays
+            darkFiles = [];
+            gainFiles = [];
+            rawFiles = [];
+            
+            // Reset file inputs
+            darkInput.value = '';
+            gainInput.value = '';
+            rawInput.value = '';
+            
+            // Reset upload item styling
+            document.getElementById('darkUploadItem').classList.remove('has-file');
+            document.getElementById('gainUploadItem').classList.remove('has-file');
+            document.getElementById('rawUploadItem').classList.remove('has-file');
+            darkFileInfo.style.display = 'none';
+            gainFileInfo.style.display = 'none';
+            rawFileInfo.style.display = 'none';
+            
+            // Reset image container
+            imageContainer.innerHTML = `
+                <div class="placeholder">
+                    <div class="placeholder-icon">🖼️</div>
+                    <h2>No Image Loaded</h2>
+                    <p>Upload Dark, Gain, and Raw images to start processing</p>
+                </div>
+            `;
+            
+            // Hide UI elements
+            resultsGallery.style.display = 'none';
+            logContainer.style.display = 'none';
+            progressContainer.style.display = 'none';
+            imageInfo.style.display = 'none';
+            processingOptions.style.display = 'none';
+            
+            // Reset process button
+            updateProcessButton();
+        });
+
+        // PyScript processing function (will be defined in py-script)
+        async function processPyScript(darkBase64, gainBase64, rawBase64, params) {
+            // Wait for PyScript to be ready
+            while (typeof pyProcess === 'undefined') {
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+            
+            return await pyProcess(darkBase64, gainBase64, rawBase64, params);
+        }
+    </script>
+
+    <!-- PyScript Code -->
+    <py-script>
+import js
+from js import console, document
+from pyodide.ffi import create_proxy, to_js
+import asyncio
+
+# Import our processing module
+from processing import process_images, get_default_params, ImageProcessor
+
+processor = ImageProcessor()
+
+async def py_process(dark_base64, gain_base64, raw_base64, params_js):
+    """Process images through the pipeline."""
+    try:
+        # Convert JS params to Python dict
+        params = dict(params_js.object_entries())
+        
+        # Process
+        result = process_images(dark_base64, gain_base64, raw_base64, params)
+        
+        return to_js(result, dict_converter=js.Object.fromEntries)
+    except Exception as e:
+        console.log(f"PyScript Error: {str(e)}")
+        return to_js({
+            'success': False,
+            'error': str(e),
+            'log': f'Error: {str(e)}'
+        }, dict_converter=js.Object.fromEntries)
+
+# Expose to JavaScript
+js.pyProcess = create_proxy(py_process)
+
+console.log("✓ PyScript Image Processing Pipeline loaded")
+console.log(f"  - Wavelet denoising: {'Available' if processor.denoiser else 'Not available'}")
+
+# Hide loading overlay
+try:
+    loading_overlay = document.getElementById("loadingOverlay")
+    if loading_overlay:
+        loading_overlay.classList.add("hidden")
+        console.log("✓ Loading overlay hidden")
+except Exception as e:
+    console.log(f"Warning: Could not hide loading overlay: {str(e)}")
+    </py-script>
+</body>
+</html>

@@ -1,142 +1,150 @@
 import matplotlib.pyplot as plt
-import os
-from pathlib import Path
+
+# Detect if running in browser environment (PyScript/Pyodide)
+try:
+    from js import console as js_console
+
+    IN_BROWSER = True
+except ImportError:
+    IN_BROWSER = False
+    js_console = None
 
 
-# Load environment variables from .env file
-def load_env_config():
-    """Load configuration from .env file."""
+def debug_print(message):
+    """Print debug message to both Python console and browser console (if available)"""
+    print(message)
+    if IN_BROWSER and js_console:
+        js_console.log(message)
+
+
+# Read DEBUG flag from .env
+def get_debug_flag():
+    import os
+
     env_path = os.path.join(os.path.dirname(__file__), ".env")
-    config = {
-        # Debug and feature flags
-        "DEBUG": False,
-        "USE_GPU": False,
-        "USE_IMAGEJ": True,
-        "USE_DENOISE": True,
-        "USE_CROP_ROTATE": True,
-        "USE_CLAHE": True,
-        "USE_CONTRAST_ENHANCEMENT": True,
-        "USE_NORMALIZE": False,
-        "USE_INVERT": True,
-        # Threshold method
-        "THRESHOLD_METHOD": "auto",
-        # Wavelet parameters
-        "WAVELET_TYPE": "sym4",
-        "WAVELET_LEVEL": 3,
-        "WAVELET_METHOD": "BayesShrink",
-        "WAVELET_MODE": "soft",
-        # Cropping parameters
-        "CROP_TOP": 0,
-        "CROP_BOTTOM": 0,
-        "CROP_LEFT": 0,
-        "CROP_RIGHT": 0,
-        # Contrast enhancement parameters
-        "CONTRAST_SATURATED_PIXELS": 5.0,
-        "CONTRAST_NORMALIZE": True,
-        "CONTRAST_EQUALIZE": True,
-        "CONTRAST_CLASSIC_EQUALIZATION": False,
-        # CLAHE parameters
-        "CLAHE_BLOCKSIZE": 127,
-        "CLAHE_HISTOGRAM_BINS": 256,
-        "CLAHE_MAX_SLOPE": 0.6,
-        "CLAHE_FAST": False,
-        "CLAHE_COMPOSITE": True,
-        # Normalize (histogram stretch) parameters
-        "NORMALIZE_SATURATED_PIXELS": 0.35,
-        # Parallel processing
-        "NUM_WORKERS": None,
-        # Paths
-        "RAW_PATH": "",
-        "DARK_PATH": "",
-        "FLAT_PATH": "",
-        "OUTPUT_DIR": "",
-    }
-
+    debug_flag = False
     if os.path.exists(env_path):
         with open(env_path, "r") as f:
             for line in f:
-                line = line.strip()
-                if not line or line.startswith("#"):
-                    continue
-                if "=" in line:
-                    key, value = line.split("=", 1)
-                    key = key.strip()
-                    value = value.strip()
-
-                    # Parse boolean values
-                    if key in [
-                        "DEBUG",
-                        "USE_GPU",
-                        "USE_IMAGEJ",
-                        "USE_DENOISE",
-                        "USE_CROP_ROTATE",
-                        "USE_CLAHE",
-                        "USE_CONTRAST_ENHANCEMENT",
-                        "USE_NORMALIZE",
-                        "USE_INVERT",
-                        "CONTRAST_NORMALIZE",
-                        "CONTRAST_EQUALIZE",
-                        "CONTRAST_CLASSIC_EQUALIZATION",
-                        "CLAHE_FAST",
-                        "CLAHE_COMPOSITE",
-                    ]:
-                        config[key] = value.lower() in ["1", "true", "yes", "on"]
-                    # Parse integer values
-                    elif key in [
-                        "WAVELET_LEVEL",
-                        "CROP_TOP",
-                        "CROP_BOTTOM",
-                        "CROP_LEFT",
-                        "CROP_RIGHT",
-                        "CLAHE_BLOCKSIZE",
-                        "CLAHE_HISTOGRAM_BINS",
-                        "NUM_WORKERS",
-                    ]:
-                        if value:
-                            config[key] = int(value)
-                    # Parse float values
-                    elif key in [
-                        "CLAHE_MAX_SLOPE",
-                        "CONTRAST_SATURATED_PIXELS",
-                        "NORMALIZE_SATURATED_PIXELS",
-                    ]:
-                        if value:
-                            config[key] = float(value)
-                    # String values
-                    else:
-                        config[key] = value
-
-    return config
+                if line.strip().startswith("DEBUG="):
+                    value = line.strip().split("=", 1)[1].lower()
+                    debug_flag = value in ["1", "true", "yes", "on"]
+    return debug_flag
 
 
-# Global config loaded once
-CONFIG = load_env_config()
-
-
-def get_debug_flag():
-    return CONFIG["DEBUG"]
-
-
+# Read USE_GPU flag from .env
 def get_use_gpu_flag():
-    return CONFIG["USE_GPU"]
+    import os
+
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    use_gpu = False
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                if line.strip().startswith("USE_GPU="):
+                    value = line.strip().split("=", 1)[1].lower()
+                    use_gpu = value in ["1", "true", "yes", "on"]
+    return use_gpu
 
 
+# Read USE_IMAGEJ flag from .env
 def get_use_imagej_flag():
-    return CONFIG["USE_IMAGEJ"]
+    import os
+
+    env_path = os.path.join(os.path.dirname(__file__), ".env")
+    use_imagej = True  # Default to True if not specified
+    if os.path.exists(env_path):
+        with open(env_path, "r") as f:
+            for line in f:
+                if line.strip().startswith("USE_IMAGEJ="):
+                    value = line.strip().split("=", 1)[1].lower()
+                    use_imagej = value in ["1", "true", "yes", "on"]
+    return use_imagej
 
 
-def save_histogram(image, out_path, title=None):
-    if get_debug_flag():
-        plt.figure(figsize=(8, 4))
+def save_histogram(image, out_path, title=None, debug_enabled=False):
+    """
+    Save histogram plot to file and auto-download in browser.
+
+    In browser/PyScript environment: Automatically downloads to Downloads folder
+    In desktop Python: Saves to the specified path on your computer
+
+    Args:
+        image: Image array to create histogram from
+        out_path: Path where histogram will be saved
+        title: Optional title for the plot
+        debug_enabled: Only save if debug is enabled
+    """
+    if debug_enabled:
+        plt.figure(figsize=(10, 5))
         plt.hist(image.ravel(), bins=256, color="blue", alpha=0.7)
         if title:
             plt.title(title)
         plt.xlabel("Pixel Value")
         plt.ylabel("Count")
+
+        # Add statistics text box
+        stats_text = f"Min: {image.min():.6f}\nMax: {image.max():.6f}\nMean: {image.mean():.6f}\nStd: {image.std():.6f}"
+        plt.text(
+            0.98,
+            0.98,
+            stats_text,
+            transform=plt.gca().transAxes,
+            verticalalignment="top",
+            horizontalalignment="right",
+            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+        )
+
         plt.tight_layout()
-        plt.savefig(out_path)
+
+        # For browser/PyScript: automatically download the file
+        if IN_BROWSER:
+            import io
+            import time
+            from js import document, Blob, URL, Uint8Array
+
+            # Save plot to bytes buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+            buf.seek(0)
+            img_bytes = buf.read()
+
+            # Convert Python bytes to JavaScript Uint8Array
+            img_array = Uint8Array.new(len(img_bytes))
+            for i, byte in enumerate(img_bytes):
+                img_array[i] = byte
+
+            # Create blob and trigger download
+            blob = Blob.new([img_array], {"type": "image/png"})
+            url = URL.createObjectURL(blob)
+
+            # Extract filename
+            filename = (
+                out_path.split("/")[-1] if "/" in out_path else out_path.split("\\")[-1]
+            )
+
+            # Create temporary download link and click it
+            a = document.createElement("a")
+            a.href = url
+            a.download = filename
+            a.style.display = "none"
+            document.body.appendChild(a)
+            a.click()
+
+            debug_print(f"[DEBUG] Downloading histogram: {filename}")
+
+            # Small delay to allow browser to process download
+            time.sleep(0.1)
+
+            # Cleanup
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+        else:
+            # Desktop Python: save to current directory
+            plt.savefig(out_path, dpi=150, bbox_inches="tight")
+            debug_print(f"[DEBUG] Saved histogram: {out_path}")
+
         plt.close()
-        print(f"[DEBUG] Saved histogram: {out_path}")
 
 
 """
@@ -146,14 +154,12 @@ Processing steps:
 1. Denoise dark, gain, raw using wavelet (sym4, level=3, BayesShrink, soft)
 2. Crop and rotate by detector type (BED/TRX)
 3. Calculate FFC with GPU acceleration
-4. Normalize to 16-bit range (scale max value to 65535)
-5. Auto Thresholding (background separation)
-6. Invert
-7. Enhance Contrast like ImageJ (saturated pixels=10%, Normalize, Equalize histogram)
-8. Apply CLAHE (Contrast Limited Adaptive Histogram Equalization)
+4. Auto Thresholding (background separation)
+5. Invert
+6. Enhance Contrast like ImageJ (saturated pixels=10%, Normalize, Equalize histogram)
 
 GPU Acceleration:
-- CuPy for array operations (FFC, normalization, thresholding, contrast enhancement)
+- CuPy for array operations (FFC, thresholding, contrast enhancement)
 - Parallel batch processing using multiprocessing
 """
 
@@ -166,14 +172,6 @@ from pathlib import Path
 from scipy.signal import find_peaks
 from scipy.ndimage import gaussian_filter1d
 from multiprocessing import Pool, cpu_count
-
-# ============================================================================
-# CONSTANTS - Bit depth values
-# ============================================================================
-MAX_8BIT = 255
-MAX_16BIT = 65535
-MAX_18BIT = 262143
-MAX_20BIT = 1048575
 
 # GPU acceleration with CuPy
 try:
@@ -245,8 +243,41 @@ def denoise_wavelet(image, wavelet="sym4", level=3, method="BayesShrink", mode="
         print("  Warning: Wavelet denoising not available, returning original image")
         return image
 
+    # Debug input
+    if get_debug_flag():
+        debug_print(
+            f"[DEBUG][DENOISE] Input - shape: {image.shape}, dtype: {image.dtype}, range: {image.min():.6f}-{image.max():.6f}"
+        )
+        debug_print(
+            f"[DEBUG][DENOISE] Input - has NaN: {np.isnan(image).any()}, has inf: {np.isinf(image).any()}"
+        )
+
     denoiser = WaveletDenoiser(wavelet=wavelet, level=level)
-    return denoiser.denoise_wavelet(image, method=method, mode=mode)
+    result = denoiser.denoise_wavelet(
+        image, method=method, mode=mode, debug=get_debug_flag()
+    )
+
+    # Debug output
+    if get_debug_flag():
+        debug_print(
+            f"[DEBUG][DENOISE] Output - shape: {result.shape}, dtype: {result.dtype}, range: {result.min():.6f}-{result.max():.6f}"
+        )
+        debug_print(
+            f"[DEBUG][DENOISE] Output - has NaN: {np.isnan(result).any()}, has inf: {np.isinf(result).any()}"
+        )
+        debug_print(
+            f"[DEBUG][DENOISE] Output - unique values: {len(np.unique(result))}"
+        )
+
+    # Safety check: if result is invalid, return original
+    if np.isnan(result).any() or np.isinf(result).any() or len(np.unique(result)) < 10:
+        if get_debug_flag():
+            debug_print(
+                "[ERROR][DENOISE] Wavelet denoising produced invalid result! Returning original image."
+            )
+        return image
+
+    return result
 
 
 def flat_field_correction(raw_image, dark_image, flat_image):
@@ -322,79 +353,35 @@ def flat_field_correction(raw_image, dark_image, flat_image):
     if raw_image.dtype == np.float32:
         return corrected_cpu.astype(np.float32)
     elif raw_image.dtype == np.uint8:
-        corrected_cpu = np.clip(corrected_cpu, 0, MAX_8BIT).astype(np.uint8)
+        corrected_cpu = np.clip(corrected_cpu, 0, 255).astype(np.uint8)
     elif raw_image.dtype == np.uint16:
-        corrected_cpu = np.clip(corrected_cpu, 0, MAX_16BIT).astype(np.uint16)
+        corrected_cpu = np.clip(corrected_cpu, 0, 65535).astype(np.uint16)
     else:
         corrected_cpu = corrected_cpu.astype(raw_image.dtype)
 
     return corrected_cpu
 
 
-def normalize_to_max_value(image, saturated_pixels=None):
-    """
-    Stretch image histogram to use the full dynamic range using ImageJ's method.
-
-    Uses ImageJ's histogram threshold counting approach (more advanced than percentile)
-    to determine optimal stretch range, then applies LUT-based normalization.
-
-    Args:
-        image: Input image (uint8 or uint16)
-        saturated_pixels: Percentage of pixels to saturate (0-100)
-            Default from config: NORMALIZE_SATURATED_PIXELS
-
-    Returns:
-        Contrast-stretched image with full dynamic range (same dtype as input)
-    """
-    if saturated_pixels is None:
-        saturated_pixels = CONFIG["NORMALIZE_SATURATED_PIXELS"]
-
-    if not IMAGEJ_AVAILABLE:
-        print("  Warning: ImageJ normalization not available, returning original image")
-        return image
-
-    # Ensure image is in correct format (uint8 or uint16)
-    if image.dtype == np.float32 or image.dtype == np.float64:
-        # Convert float to uint16
-        image_uint16 = np.clip(image, 0, MAX_16BIT).astype(np.uint16)
-    else:
-        image_uint16 = image
-
-    # Use ImageJ enhance_contrast with normalize=True, equalize=False
-    result = ImageJReplicator.enhance_contrast(
-        image_uint16,
-        saturated_pixels=saturated_pixels,
-        equalize=False,
-        normalize=True,
-        classic_equalization=False,
-    )
-
-    return result
-
-
-def crop_and_rotate_by_detector(image, detector_type):
+def crop_and_rotate_by_detector(
+    image, detector_type, crop_top=200, crop_bottom=200, crop_left=0, crop_right=0
+):
     """
     Crop and rotate image based on detector type.
-    Crop values are read from .env file (CROP_TOP, CROP_BOTTOM, CROP_LEFT, CROP_RIGHT).
 
     Args:
         image: Input image
         detector_type: 'BED' or 'TRX'
+        crop_top: Pixels to crop from top (default: 200)
+        crop_bottom: Pixels to crop from bottom (default: 200)
+        crop_left: Pixels to crop from left (default: 0)
+        crop_right: Pixels to crop from right (default: 0)
 
     Returns:
         Cropped and rotated image
     """
     height, width = image.shape[:2]
-
-    # Read crop parameters from config
-    crop_top = CONFIG["CROP_TOP"]
-    crop_bottom = CONFIG["CROP_BOTTOM"]
-    crop_left = CONFIG["CROP_LEFT"]
-    crop_right = CONFIG["CROP_RIGHT"]
-
-    # Apply cropping from all sides
+    # Crop from all sides
     cropped = image[crop_top : height - crop_bottom, crop_left : width - crop_right]
-
     if detector_type == "TRX":
         # Optionally, keep any TRX-specific rotation
         result = cv2.rotate(cropped, cv2.ROTATE_90_COUNTERCLOCKWISE)
@@ -423,23 +410,25 @@ def detect_detector_type(filename):
         return "BED"
 
 
-def auto_threshold_detection(image, filename=None, output_dir=None):
-    # Read threshold method from config
-    threshold_method = CONFIG.get("THRESHOLD_METHOD", "auto").lower()
-    debug_enabled = get_debug_flag()
+def auto_threshold_detection(
+    image, filename=None, debug_enabled=False, threshold_method="auto"
+):
     """
     Detect optimal threshold for background separation.
     Uses 5 methods with priority on secondary peak (background noise level).
     Updated to match auto_threshold_detection.py and work with float32 [0,1] range.
-    
+
     Args:
         image: Input image (float32 [0,1])
         filename: Optional filename for debug output naming
-        output_dir: Optional directory to save debug histogram files
-    
+        debug_enabled: Enable debug output (histogram plots and console logs)
+        threshold_method: Method to use ('auto', 'valley', 'otsu', 'knee', 'percentile_25', 'secondary_peak')
+
     Returns:
         threshold: Optimal threshold value (in same range as image)
     """
+    # Normalize threshold_method to lowercase
+    threshold_method = threshold_method.lower() if threshold_method else "auto"
     # Calculate histogram with higher resolution (512 bins instead of 256)
     hist, bins = np.histogram(
         image.flatten(), bins=512, range=(image.min(), image.max())
@@ -513,16 +502,16 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
     # Method 4: Otsu's method (convert to uint16 first for OpenCV)
     if image.dtype == np.float32:
         # Convert to uint16 for Otsu
-        image_uint16 = (image * MAX_16BIT).clip(0, MAX_16BIT).astype(np.uint16)
+        image_uint16 = (image * 65535).clip(0, 65535).astype(np.uint16)
         _, threshold_otsu_uint16 = cv2.threshold(
-            image_uint16, 0, MAX_16BIT, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            image_uint16, 0, 65535, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
         threshold_otsu = (
-            threshold_otsu_uint16 / MAX_16BIT
+            threshold_otsu_uint16 / 65535.0
         )  # Convert back to float32 range
     else:
         _, threshold_otsu = cv2.threshold(
-            image, 0, MAX_16BIT, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+            image, 0, 65535, cv2.THRESH_BINARY + cv2.THRESH_OTSU
         )
     # Ensure threshold_otsu is a scalar for formatting/plotting
     if isinstance(threshold_otsu, np.ndarray):
@@ -550,8 +539,8 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
 
     # For float32 range, scale the fixed search values from uint16 range
     if image.dtype == np.float32:
-        search_min = min(adaptive_min, 700.0 / MAX_16BIT)
-        search_max = max(adaptive_max, min(image.max(), 950.0 / MAX_16BIT))
+        search_min = min(adaptive_min, 700.0 / 65535.0)
+        search_max = max(adaptive_max, min(image.max(), 950.0 / 65535.0))
     else:
         search_min = min(adaptive_min, 700)
         search_max = max(adaptive_max, min(image.max(), 950))
@@ -573,7 +562,7 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
 
             # Find valley before secondary peak
             if image.dtype == np.float32:
-                valley_search_start = max(peak_position * 0.5, 400.0 / MAX_16BIT)
+                valley_search_start = max(peak_position * 0.5, 400.0 / 65535.0)
             else:
                 valley_search_start = max(peak_position * 0.5, 400)
 
@@ -591,7 +580,7 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
         "percentile_25": threshold_25,
         "valley": threshold_valley,
         "knee": threshold_knee,
-        "otsu": threshold_otsu,
+        "otsu": threshold_otsu_val,
     }
 
     if threshold_secondary is not None:
@@ -629,9 +618,9 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
             threshold_auto = threshold_valley
             selected_method = "valley (auto)"
         elif threshold_secondary is not None:
-            # Use secondary_peak if valley detection failed but secondary peak exists
+            # Use secondary_peak if valley not available
             threshold_auto = threshold_secondary
-            selected_method = "secondary_peak (auto-fallback)"
+            selected_method = "secondary_peak (auto)"
         elif threshold_otsu_val > 0:
             # Fallback to Otsu for unimodal distributions
             threshold_auto = threshold_otsu_val
@@ -643,20 +632,41 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
     else:
         # Unknown method in .env, use safe fallback
         if image.dtype == np.float32:
-            threshold_auto = 650.0 / MAX_16BIT  # Scale to [0,1] range
+            threshold_auto = 650.0 / 65535.0  # Scale to [0,1] range
         else:
             threshold_auto = 650
         selected_method = f"fixed (unknown method: {threshold_method})"
 
+    # SAFEGUARD: Ensure threshold is not too low (minimum 0.05 for float32, 500 for uint16)
+    # This prevents all-white background when FFC produces near-zero values
+    if image.dtype == np.float32:
+        min_threshold = 0.05  # 5% of [0,1] range
+        if threshold_auto < min_threshold:
+            debug_print(
+                f"[WARNING] Threshold {threshold_auto:.6f} too low, clamping to {min_threshold:.6f}"
+            )
+            threshold_auto = min_threshold
+            selected_method = f"{selected_method} (clamped to minimum)"
+    else:
+        min_threshold = 500  # For uint16 images
+        if threshold_auto < min_threshold:
+            debug_print(
+                f"[WARNING] Threshold {threshold_auto:.0f} too low, clamping to {min_threshold:.0f}"
+            )
+            threshold_auto = min_threshold
+            selected_method = f"{selected_method} (clamped to minimum)"
+
     # Debug: Print all candidate thresholds and which was selected (only if DEBUG=True)
     if debug_enabled:
-        print(f"[DEBUG][THRESHOLDS] Percentile 25%: {threshold_25:.6f}")
-        print(f"[DEBUG][THRESHOLDS] Valley: {threshold_valley:.6f}")
-        print(f"[DEBUG][THRESHOLDS] Knee: {threshold_knee:.6f}")
-        print(f"[DEBUG][THRESHOLDS] Otsu: {threshold_otsu_val:.6f}")
+        debug_print(f"[DEBUG][THRESHOLDS] Percentile 25%: {threshold_25:.6f}")
+        debug_print(f"[DEBUG][THRESHOLDS] Valley: {threshold_valley:.6f}")
+        debug_print(f"[DEBUG][THRESHOLDS] Knee: {threshold_knee:.6f}")
+        debug_print(f"[DEBUG][THRESHOLDS] Otsu: {threshold_otsu_val:.6f}")
         if threshold_secondary is not None:
-            print(f"[DEBUG][THRESHOLDS] Secondary Peak: {threshold_secondary:.6f}")
-        print(
+            debug_print(
+                f"[DEBUG][THRESHOLDS] Secondary Peak: {threshold_secondary:.6f}"
+            )
+        debug_print(
             f"[DEBUG][THRESHOLDS] Selected: {threshold_auto:.6f} (method: {selected_method})"
         )
 
@@ -670,20 +680,55 @@ def auto_threshold_detection(image, filename=None, output_dir=None):
         )
         plt.legend()
         plt.tight_layout()
-        # Include filename in debug output to avoid overwriting
+
+        # Save histogram plot
         debug_filename = (
             f"debug_histogram_thresholds_{filename}.png"
             if filename
             else "debug_histogram_thresholds.png"
         )
-        # Save to output_dir if provided, otherwise save to current directory
-        if output_dir:
-            debug_filepath = os.path.join(output_dir, debug_filename)
+
+        # For browser/PyScript: automatically download the file
+        if IN_BROWSER:
+            import io
+            import base64
+            from js import document, Blob, URL, Uint8Array
+            from pyodide.ffi import to_js
+
+            # Save plot to bytes buffer
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png", dpi=150, bbox_inches="tight")
+            buf.seek(0)
+            img_bytes = buf.read()
+
+            # Convert Python bytes to JavaScript Uint8Array
+            img_array = Uint8Array.new(len(img_bytes))
+            for i, byte in enumerate(img_bytes):
+                img_array[i] = byte
+
+            # Create blob and trigger download
+            blob = Blob.new([img_array], {"type": "image/png"})
+            url = URL.createObjectURL(blob)
+
+            # Create temporary download link and click it
+            a = document.createElement("a")
+            a.href = url
+            a.download = debug_filename
+            a.style.display = "none"
+            document.body.appendChild(a)
+            a.click()
+
+            # Cleanup
+            document.body.removeChild(a)
+            URL.revokeObjectURL(url)
+
+            debug_print(f"[DEBUG] Downloaded threshold histogram: {debug_filename}")
         else:
-            debug_filepath = debug_filename
-        plt.savefig(debug_filepath)
+            # Desktop Python: save to current directory
+            plt.savefig(debug_filename, dpi=150, bbox_inches="tight")
+            debug_print(f"[DEBUG] Saved threshold histogram to: {debug_filename}")
+
         plt.close()
-        print(f"[DEBUG] Saved threshold histogram: {debug_filepath}")
 
     return threshold_auto
 
@@ -773,7 +818,13 @@ def invert_image(image):
 
 
 def process_single_image(
-    raw_path, dark_path, flat_path, output_path, detector_type=None
+    raw_path,
+    dark_path,
+    flat_path,
+    output_path,
+    detector_type=None,
+    debug_enabled=False,
+    threshold_method="auto",
 ):
     """
     Process a single image through the complete pipeline.
@@ -793,6 +844,8 @@ def process_single_image(
         flat_path: Path to flat/gain calibration image
         output_path: Path to save final result
         detector_type: 'BED' or 'TRX' (if None, auto-detect from filename)
+        debug_enabled: Enable debug output (default: False)
+        threshold_method: Threshold detection method (default: 'auto')
 
     Returns:
         True if successful, False otherwise
@@ -805,7 +858,7 @@ def process_single_image(
         print(f"  Detected detector: {detector_type}")
 
     # Load images
-    print("  [1/9] Loading images...")
+    print("  [1/8] Loading images...")
     raw_image = cv2.imread(raw_path, cv2.IMREAD_UNCHANGED)
     dark_image = cv2.imread(dark_path, cv2.IMREAD_UNCHANGED)
     flat_image = cv2.imread(flat_path, cv2.IMREAD_UNCHANGED)
@@ -823,51 +876,46 @@ def process_single_image(
         raw_image,
         os.path.join(debug_dir, f"histogram_raw_{image_id}.png"),
         title="Raw Image Histogram",
+        debug_enabled=debug_enabled,
     )
 
     # Convert to float32 immediately after loading
-    raw_image = raw_image.astype(np.float32) / MAX_16BIT
-    dark_image = dark_image.astype(np.float32) / MAX_16BIT
-    flat_image = flat_image.astype(np.float32) / MAX_16BIT
+    raw_image = raw_image.astype(np.float32) / 65535.0
+    dark_image = dark_image.astype(np.float32) / 65535.0
+    flat_image = flat_image.astype(np.float32) / 65535.0
 
     # Step 1: Denoise using wavelet (now works with float32 [0,1])
-    wavelet_type = CONFIG["WAVELET_TYPE"]
-    wavelet_level = CONFIG["WAVELET_LEVEL"]
-    wavelet_method = CONFIG["WAVELET_METHOD"]
-    wavelet_mode = CONFIG["WAVELET_MODE"]
-    print(
-        f"  [2/9] Denoising images (wavelet: {wavelet_type}, level={wavelet_level}, {wavelet_method}, {wavelet_mode})..."
-    )
+    print("  [2/8] Denoising images (wavelet: sym4, level=3, BayesShrink, soft)...")
     dark_denoised = denoise_wavelet(
-        dark_image,
-        wavelet=wavelet_type,
-        level=wavelet_level,
-        method=wavelet_method,
-        mode=wavelet_mode,
+        dark_image, wavelet="sym4", level=3, method="BayesShrink", mode="soft"
     )
     flat_denoised = denoise_wavelet(
-        flat_image,
-        wavelet=wavelet_type,
-        level=wavelet_level,
-        method=wavelet_method,
-        mode=wavelet_mode,
+        flat_image, wavelet="sym4", level=3, method="BayesShrink", mode="soft"
     )
     raw_denoised = denoise_wavelet(
-        raw_image,
-        wavelet=wavelet_type,
-        level=wavelet_level,
-        method=wavelet_method,
-        mode=wavelet_mode,
+        raw_image, wavelet="sym4", level=3, method="BayesShrink", mode="soft"
     )
+
+    if debug_enabled:
+        debug_print(
+            f"    [DEBUG] Raw denoised range: {raw_denoised.min():.6f} - {raw_denoised.max():.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] Dark denoised range: {dark_denoised.min():.6f} - {dark_denoised.max():.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] Flat denoised range: {flat_denoised.min():.6f} - {flat_denoised.max():.6f}"
+        )
 
     save_histogram(
         raw_denoised,
         os.path.join(debug_dir, f"histogram_denoised_{image_id}.png"),
         title="Denoised Raw Histogram",
+        debug_enabled=debug_enabled,
     )
 
     # Step 2: Crop and rotate images - ALL images must be transformed identically
-    print(f"  [3/9] Cropping and rotating ({detector_type})...")
+    print(f"  [3/8] Cropping and rotating ({detector_type})...")
 
     # Apply same transformation to all three images
     dark_cropped = crop_and_rotate_by_detector(dark_denoised, detector_type)
@@ -878,132 +926,132 @@ def process_single_image(
         raw_cropped,
         os.path.join(debug_dir, f"histogram_cropped_{image_id}.png"),
         title="Cropped Raw Histogram",
+        debug_enabled=debug_enabled,
     )
 
-    crop_info = f"top={CONFIG['CROP_TOP']}, bottom={CONFIG['CROP_BOTTOM']}, left={CONFIG['CROP_LEFT']}, right={CONFIG['CROP_RIGHT']}"
     if detector_type == "TRX":
-        print(f"    All images: cropped ({crop_info}), rotated 90° CCW")
+        print(f"    All images: cropped 200px each side, rotated 90° CCW")
     else:
-        print(f"    All images: cropped ({crop_info})")
+        print(f"    All images: cropped 200px each side")
 
     print(f"    Final shape (all identical): {raw_cropped.shape}")
 
     # Step 3: FFC with matched dimensions
-    print("  [4/9] Applying Flat-Field Correction...")
+    print("  [4/8] Applying Flat-Field Correction...")
     ffc_result = flat_field_correction(raw_cropped, dark_cropped, flat_cropped)
-    print(f"    FFC output range: {ffc_result.min()} - {ffc_result.max()}")
+    print(f"    FFC output range: {ffc_result.min():.6f} - {ffc_result.max():.6f}")
+    if debug_enabled:
+        debug_print(
+            f"    [DEBUG] FFC mean: {ffc_result.mean():.6f}, std: {ffc_result.std():.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] FFC 25th percentile: {np.percentile(ffc_result, 25):.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] FFC 50th percentile: {np.percentile(ffc_result, 50):.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] FFC 75th percentile: {np.percentile(ffc_result, 75):.6f}"
+        )
 
     save_histogram(
-        ffc_result / ffc_result.max() if ffc_result.max() > 0 else ffc_result,
+        ffc_result,
         os.path.join(debug_dir, f"histogram_ffc_{image_id}.png"),
-        title="FFC Result Histogram (Normalized 0-1)",
+        title="FFC Result Histogram",
+        debug_enabled=debug_enabled,
     )
 
-    # Step 4: Normalize to configurable bit depth (optional)
-    if CONFIG.get("USE_NORMALIZE", False):
-        print(f"  [5/9] Normalizing to max value {MAX_16BIT}...")
-        normalized_result = normalize_to_max_value(ffc_result, MAX_16BIT)
-        print(
-            f"    Normalized range: {normalized_result.min()} - {normalized_result.max()}"
+    # Step 4: Auto Thresholding
+    print("  [5/8] Auto Thresholding...")
+    threshold = auto_threshold_detection(
+        ffc_result,
+        filename=image_id,
+        debug_enabled=debug_enabled,
+        threshold_method=threshold_method,
+    )
+    if debug_enabled:
+        debug_print(f"    [DEBUG] Detected threshold: {threshold:.6f}")
+        # Debug: pixel counts below/above threshold
+        below = np.count_nonzero(ffc_result <= threshold)
+        above = np.count_nonzero(ffc_result > threshold)
+        total = ffc_result.size
+        debug_print(f"    [DEBUG] Pixels <= threshold: {below} ({below/total:.2%})")
+        debug_print(f"    [DEBUG] Pixels > threshold: {above} ({above/total:.2%})")
+    threshold_result = apply_threshold_separation(ffc_result, threshold)
+    if debug_enabled:
+        debug_print(
+            f"    [DEBUG] Thresholded min/max: {threshold_result.min()} - {threshold_result.max()}"
+        )
+        debug_print(
+            f"    [DEBUG] Thresholded nonzero count: {np.count_nonzero(threshold_result)}"
         )
 
-        save_histogram(
-            normalized_result / MAX_16BIT,
-            os.path.join(debug_dir, f"histogram_normalized_{image_id}.png"),
-            title=f"Normalized Result Histogram (max={MAX_16BIT})",
-        )
-    else:
-        print("  [5/9] Normalization skipped (USE_NORMALIZE=False)")
-        normalized_result = ffc_result.copy()
-        if get_debug_flag():
-            print(
-                "    [DEBUG] Normalization step was skipped. Passing FFC result forward."
-            )
+    save_histogram(
+        threshold_result,
+        os.path.join(debug_dir, f"histogram_thresholded_{image_id}.png"),
+        title="Thresholded Result Histogram",
+        debug_enabled=debug_enabled,
+    )
 
-    # Step 5: Auto Thresholding (optional)
-    threshold_method = CONFIG.get("THRESHOLD_METHOD", "auto").lower()
-    if threshold_method in ["none", "off", "skip", "no"]:
-        print("  [6/9] Thresholding skipped (THRESHOLD_METHOD set to 'none'/'off')")
-        threshold_result = normalized_result.copy()
-        if get_debug_flag():
-            print(
-                "    [DEBUG] Thresholding step was skipped. Passing normalized result forward."
-            )
-    else:
-        print("  [6/9] Auto Thresholding...")
-        threshold = auto_threshold_detection(
-            normalized_result, filename=image_id, output_dir=debug_dir
-        )
-        if get_debug_flag():
-            print(f"    [DEBUG] Detected threshold: {threshold:.6f}")
-            # Debug: pixel counts below/above threshold
-            below = np.count_nonzero(normalized_result <= threshold)
-            above = np.count_nonzero(normalized_result > threshold)
-            total = normalized_result.size
-            print(f"    [DEBUG] Pixels <= threshold: {below} ({below/total:.2%})")
-            print(f"    [DEBUG] Pixels > threshold: {above} ({above/total:.2%})")
-        threshold_result = apply_threshold_separation(normalized_result, threshold)
-        if get_debug_flag():
-            print(
-                f"    [DEBUG] Thresholded min/max: {threshold_result.min()} - {threshold_result.max()}"
-            )
-            print(
-                f"    [DEBUG] Thresholded nonzero count: {np.count_nonzero(threshold_result)}"
-            )
-
-        save_histogram(
-            threshold_result,
-            os.path.join(debug_dir, f"histogram_thresholded_{image_id}.png"),
-            title="Thresholded Result Histogram",
-        )
-
-    # Step 6: Invert
-    print("  [7/9] Inverting image...")
+    # Step 5: Invert
+    print("  [6/8] Inverting image...")
     inverted = invert_image(threshold_result)
+
+    if debug_enabled:
+        debug_print(
+            f"    [DEBUG] Inverted range: {inverted.min():.6f} - {inverted.max():.6f}"
+        )
+        debug_print(
+            f"    [DEBUG] Inverted mean: {inverted.mean():.6f}, std: {inverted.std():.6f}"
+        )
 
     save_histogram(
         inverted,
         os.path.join(debug_dir, f"histogram_inverted_{image_id}.png"),
         title="Inverted Result Histogram",
+        debug_enabled=debug_enabled,
     )
 
-    # Step 7: Enhance Contrast using ImageJ Replicator
-    print("  [8/9] Enhancing contrast (ImageJ method)")
-    if not CONFIG["USE_CONTRAST_ENHANCEMENT"]:
-        print("    Skipping contrast enhancement (USE_CONTRAST_ENHANCEMENT=False)")
-        enhanced_uint16 = (inverted * MAX_16BIT).clip(0, MAX_16BIT).astype(np.uint16)
-    elif not IMAGEJ_AVAILABLE:
+    # Step 6: Enhance Contrast using ImageJ Replicator
+    print("  [7/8] Enhancing contrast (ImageJ method)")
+    if not IMAGEJ_AVAILABLE:
         print(
             "    Warning: ImageJ processing not available, skipping contrast enhancement"
         )
-        enhanced_uint16 = (inverted * MAX_16BIT).clip(0, MAX_16BIT).astype(np.uint16)
+        enhanced_uint16 = (inverted * 65535).clip(0, 65535).astype(np.uint16)
     else:
         # Convert float32 [0,1] to uint16 for ImageJ processing
-        inverted_uint16 = (inverted * MAX_16BIT).clip(0, MAX_16BIT).astype(np.uint16)
+        inverted_uint16 = (inverted * 65535).clip(0, 65535).astype(np.uint16)
 
         # Apply ImageJ-style contrast enhancement
         enhanced = ImageJReplicator.enhance_contrast(
             inverted_uint16,
-            saturated_pixels=CONFIG["CONTRAST_SATURATED_PIXELS"],
-            normalize=CONFIG["CONTRAST_NORMALIZE"],
-            equalize=CONFIG["CONTRAST_EQUALIZE"],
-            classic_equalization=CONFIG["CONTRAST_CLASSIC_EQUALIZATION"],
+            saturated_pixels=5,
+            normalize=True,
+            equalize=True,
+            classic_equalization=False,
         )
 
         # Convert back to uint16 if needed (enhance_contrast returns uint8 by default)
         if enhanced.dtype == np.uint8:
-            enhanced_uint16 = (
-                enhanced.astype(np.float32) / MAX_8BIT * MAX_16BIT
-            ).astype(np.uint16)
+            enhanced_uint16 = (enhanced.astype(np.float32) / 255.0 * 65535).astype(
+                np.uint16
+            )
         else:
             enhanced_uint16 = enhanced
 
         print(f"    Output range: {enhanced_uint16.min()} - {enhanced_uint16.max()}")
 
+        if debug_enabled:
+            debug_print(
+                f"    [DEBUG] Enhanced mean: {enhanced_uint16.mean():.2f}, std: {enhanced_uint16.std():.2f}"
+            )
+
     save_histogram(
         enhanced_uint16,
         os.path.join(debug_dir, f"histogram_enhanced_{image_id}.png"),
         title="Enhanced Result Histogram",
+        debug_enabled=debug_enabled,
     )
 
     # Step 7: Apply CLAHE using ImageJ Replicator
@@ -1015,29 +1063,27 @@ def process_single_image(
     #   max_slope: 1.0-2.0 = kontras ringan (untuk X-ray medis)
     #              3.0     = default ImageJ
     #              4.0+    = kontras kuat
-    print("  [9/9] Applying CLAHE")
-    if not CONFIG["USE_CLAHE"]:
-        print("    Skipping CLAHE (USE_CLAHE=False)")
-        final_result_uint16 = enhanced_uint16
-    elif not IMAGEJ_AVAILABLE:
+    print("  [8/8] Applying CLAHE")
+    if not IMAGEJ_AVAILABLE:
         print("    Warning: ImageJ processing not available, skipping CLAHE")
         final_result_uint16 = enhanced_uint16
     else:
         # Apply CLAHE using ImageJ-style parameters
+        # Parameters: blocksize=127 (default), histogram_bins=256, max_slope=1.5 (gentle for medical)
         clahe_result = ImageJReplicator.apply_clahe(
             enhanced_uint16,
-            blocksize=CONFIG["CLAHE_BLOCKSIZE"],
-            histogram_bins=CONFIG["CLAHE_HISTOGRAM_BINS"],
-            max_slope=CONFIG["CLAHE_MAX_SLOPE"],
+            blocksize=127,
+            histogram_bins=256,
+            max_slope=0.6,
             mask=None,
-            fast=CONFIG["CLAHE_FAST"],
-            composite=CONFIG["CLAHE_COMPOSITE"],
+            fast=False,
+            composite=True,
         )
 
         # Convert to uint16 if needed
         if clahe_result.dtype == np.uint8:
             final_result_uint16 = (
-                clahe_result.astype(np.float32) / MAX_8BIT * MAX_16BIT
+                clahe_result.astype(np.float32) / 255.0 * 65535
             ).astype(np.uint16)
         else:
             final_result_uint16 = clahe_result
@@ -1046,10 +1092,16 @@ def process_single_image(
             f"    Final output range: {final_result_uint16.min()} - {final_result_uint16.max()}"
         )
 
+        if debug_enabled:
+            debug_print(
+                f"    [DEBUG] CLAHE final mean: {final_result_uint16.mean():.2f}, std: {final_result_uint16.std():.2f}"
+            )
+
     save_histogram(
         final_result_uint16,
         os.path.join(debug_dir, f"histogram_clahe_{image_id}.png"),
         title="Final CLAHE Result Histogram",
+        debug_enabled=debug_enabled,
     )
 
     # Save result
@@ -1098,22 +1150,18 @@ def batch_process_parallel(image_list, output_dir, num_workers=None):
     Args:
         image_list: List of tuples (raw_path, dark_path, flat_path, detector_type)
         output_dir: Output directory for processed images
-        num_workers: Number of parallel workers (default: from .env or auto)
+        num_workers: Number of parallel workers (default: 4 for GPU, CPU count - 1 for CPU)
 
     Returns:
         Statistics dict with success/failure counts
     """
     if num_workers is None:
-        # Try to get from config first
-        num_workers = CONFIG.get("NUM_WORKERS")
-
-        if num_workers is None:
-            # Use fewer workers when GPU is available to avoid GPU memory contention
-            # GPU handles internal parallelism more efficiently than multiprocessing
-            if GPU_AVAILABLE:
-                num_workers = 4  # Optimal for GPU to avoid memory contention
-            else:
-                num_workers = max(1, cpu_count() - 1)
+        # Use fewer workers when GPU is available to avoid GPU memory contention
+        # GPU handles internal parallelism more efficiently than multiprocessing
+        if GPU_AVAILABLE:
+            num_workers = 4  # Optimal for GPU to avoid memory contention
+        else:
+            num_workers = max(1, cpu_count() - 1)
 
     print(f"\n{'='*70}")
     print(f"BATCH PROCESSING: {len(image_list)} images")
@@ -1183,26 +1231,12 @@ def main():
     print("  - Parallel batch processing (multiprocessing)")
     print("=" * 70)
 
-    # Example 1: Single image processing
-    # Load paths from .env or use defaults
-    raw_path = CONFIG.get("RAW_PATH") or r"test\BED_1765259553954_rad.tiff"
-    dark_path = CONFIG.get("DARK_PATH") or r"test\BED_1765259553954_dark.tiff"
-    flat_path = CONFIG.get("FLAT_PATH") or r"test\BED_1765259553954_gain.tiff"
-    output_dir = CONFIG.get("OUTPUT_DIR") or r"test\output"
-
-    # Ensure paths use raw strings for proper Windows path handling
-    raw_path = rf"{raw_path}" if raw_path and "\\" not in raw_path else raw_path
-    dark_path = rf"{dark_path}" if dark_path and "\\" not in dark_path else dark_path
-    flat_path = rf"{flat_path}" if flat_path and "\\" not in flat_path else flat_path
-    output_dir = (
-        rf"{output_dir}" if output_dir and "\\" not in output_dir else output_dir
-    )
-
-    # Construct output path with proper filename and extension
-    raw_filename = os.path.splitext(os.path.basename(raw_path))[0]
-    output_path = os.path.join(output_dir, f"{raw_filename}_processed.tiff")
-    success = process_single_image(raw_path, dark_path, flat_path, output_path)
-    print(f"\nSingle image processing {'succeeded' if success else 'failed'}")
+    # # Example 1: Single image processing
+    # # Construct output path with proper filename and extension
+    # raw_filename = os.path.splitext(os.path.basename(raw_path))[0]
+    # output_path = os.path.join(output_dir, f"{raw_filename}_processed.tiff")
+    # success = process_single_image(raw_path, dark_path, flat_path, output_path)
+    # print(f"\nSingle image processing {'succeeded' if success else 'failed'}")
 
     # Example 2: Batch processing
     # image_list = [

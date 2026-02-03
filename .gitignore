@@ -1,130 +1,87 @@
-# Byte-compiled / optimized / DLL files
+# Firebase
+.firebase/
+firebase-debug.log
+firebase-debug.*.log
+.firebaserc
+
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
-env/
 build/
 develop-eggs/
 dist/
 downloads/
-egg-info/
+eggs/
 .eggs/
 lib/
 lib64/
 parts/
 sdist/
 var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
 MANIFEST
-test
 
-# Jupyter Notebook checkpoints
-.ipynb_checkpoints
-
-# PyInstaller
-*.manifest
-*.spec
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-
-# VS Code settings
-.vscode/
-
-# mypy
-.mypy_cache/
-.dmypy.json
-
-# Environments
-.env
-.venv
-env/
+# Virtual Environment
 venv/
+env/
 ENV/
 env.bak/
 venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
+# Jupyter Notebook
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
-# Rope project settings
-.ropeproject
+# YOLO
+runs/
+*.pt
+*.weights
+*.onnx
+*.engine
+*.mlmodel
+*.torchscript
+yolov*/
+yolo11*/
+datasets/
+weights/
 
-# Local files
-*.log
-*.tmp
-*.bak
-*.swp
-*.swo
-*.orig
-
-# MacOS
-.DS_Store
-
-# Windows
-Thumbs.db
-Desktop.ini
-
-# Other
-*.sqlite3
-*.db
-*.tar.gz
-*.zip
-*.rar
-*.7z
-*.gz
-*.bz2
-*.xz
-*.csv
-*.tsv
-*.xls
-*.xlsx
-*.ppt
-*.pptx
-*.doc
-*.docx
-*.pdf
-*.mp4
-*.mp3
-*.wav
-*.ogg
-*.flac
-*.webm
-*.mkv
-*.avi
-*.mov
-*.wmv
-*.svg
-*.png
+# Images and Videos
 *.jpg
 *.jpeg
+*.png
 *.gif
 *.bmp
 *.tiff
-*.ico
-*.txt
+*.mp4
+*.avi
+*.mov
+*.mkv
 
-# Ignore build artifacts
-build_image_pairs.pyc
-complete_pipeline.pyc
-test_complete_pipeline.pyc
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Project specific
+output/
+results/
+logs/
+*.log
+*.env
+
+# Model files (optional - uncomment if you want to track models)
+# !custom_model.pt
+
+# Data (optional - uncomment if you want to track specific images)
+# !sample_images/
